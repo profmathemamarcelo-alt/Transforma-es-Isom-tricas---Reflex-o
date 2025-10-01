@@ -5,19 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Atividade - 01: Geometria Plana – Formulário Automatizado</title>
 
+  <!-- Tailwind via CDN: configure SEMPRE em window.tailwind.config antes do script -->
   <script>
     window.tailwind = window.tailwind || {};
-    tailwind.config = { darkMode: 'class', corePlugins: { preflight: false } };
+    window.tailwind.config = {
+      darkMode: 'class',
+      corePlugins: { preflight: false } /* mantenho como você usou */
+    };
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
 
+  <!-- Libs -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 
   <style>
     .error { border-color: #ef4444 !important; }
     button:disabled { opacity:.6; cursor:not-allowed; }
-    /* Fallbacks independentes do Tailwind para modo escuro (agora com !important) */
+    /* Fallbacks independentes do Tailwind para modo escuro (com !important) */
     html[data-mode="dark"] body { background-color:#0f172a !important; color:#e2e8f0 !important; }
     html[data-mode="dark"] .bg-white { background-color:#0b1220 !important; }
     html[data-mode="dark"] .bg-slate-50 { background-color:#0f172a !important; }
@@ -103,7 +108,7 @@
     </div>
 
     <div id="login-modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center p-4">
-      <div class="w-full max-w-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-xl">
+      <div class="w-full max-w-sm bg-white dark:bg-slate-8 00 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-xl">
         <h2 class="text-lg font-semibold mb-3">Acesso do Administrador</h2>
         <label class="block text-sm mb-1">Código de administrador</label>
         <div class="flex gap-2">
@@ -126,50 +131,44 @@
       const $ = (s)=>document.querySelector(s);
 
       /* ========================
-       * 0) Tema Claro/Escuro persistente (com fallback CSS independente)
+       * 0) Tema Claro/Escuro persistente (FIX: classe só no <html>)
        * ======================== */
       const THEME_KEY = 'atividadeThemeMode';
       const themeToggle = $('#theme-toggle');
+
       function applyColorScheme(mode){
-        const root = document.documentElement;
-        const body = document.body;
+        const root = document.documentElement; // <html>
         const isDark = mode === 'dark';
-        // Tailwind
+
+        // Tailwind dark mode: só no <html>
         root.classList.toggle('dark', isDark);
-        body.classList.toggle('dark', isDark);
-        // Fallback CSS puro (atributo)
-        if (isDark) { root.setAttribute('data-mode','dark'); } else { root.removeAttribute('data-mode'); }
-        // Fallback FINAL inline — garante virada visual mesmo sem Tailwind nem CSS externo
-        try{
-          body.style.backgroundColor = isDark ? '#0f172a' : '';
-          body.style.color = isDark ? '#e2e8f0' : '';
-        }catch{}
-        if(themeToggle){
+
+        // Fallback CSS com data-attr (usado nos seletores html[data-mode="dark"] ...)
+        if (isDark) root.setAttribute('data-mode','dark');
+        else root.removeAttribute('data-mode');
+
+        // Texto e aria-state do botão
+        if (themeToggle){
           themeToggle.textContent = isDark ? 'Tema: Escuro' : 'Tema: Claro';
           themeToggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
         }
+
         try{ localStorage.setItem(THEME_KEY, mode); }catch{}
-        try{ console.debug('[theme]', {mode, rootHas:root.classList.contains('dark'), bodyHas:body.classList.contains('dark'), dataMode:root.getAttribute('data-mode'), inlineBG:body.style.backgroundColor}); }catch{}
       }
-      // ✅ FIX da exceção: atribuição inválida removida
+
+      // Sempre iniciar em Claro; só usa salvo se existir
       let savedMode = 'light';
       try{
         const stored = localStorage.getItem(THEME_KEY);
-        // Sempre iniciar em Claro por padrão; só usa salvo se existir.
-        savedMode = (stored === 'dark' || stored === 'light') ? stored : 'light';
-      }catch{ savedMode = 'light'; }
+        if (stored === 'dark' || stored === 'light') savedMode = stored;
+      }catch{}
+
       applyColorScheme(savedMode);
 
+      // Clique direto no botão (sem listener duplicado no document)
       themeToggle?.addEventListener('click', ()=>{
         const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
         applyColorScheme(next);
-      });
-      document.addEventListener('click', (ev)=>{
-        const t = ev.target;
-        if(t && t.id === 'theme-toggle'){
-          const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
-          applyColorScheme(next);
-        }
       });
 
       /* ========================
@@ -383,8 +382,8 @@
           const qNum = idx+1;
           wrapper.innerHTML = `
             <div>
-              <label class=\"block text-sm font-medium\">${qNum}) ${label}</label>
-              <input type=\"text\" name=\"q${qNum}\" class=\"w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 px-3 py-2 rounded-md\" required />
+              <label class="block text-sm font-medium">${qNum}) ${label}</label>
+              <input type="text" name="q${qNum}" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 px-3 py-2 rounded-md" required />
             </div>
           `;
           questionsArea.appendChild(wrapper);
@@ -617,6 +616,9 @@
       /* ========================
        * 6) Testes rápidos (dev)
        * ======================== */
+      function sanitizeFilename(str){ return (str||'').normalize('NFD').replace(/[^\w\s-]/g,'').trim().replace(/\s+/g,'-').toLowerCase(); }
+      function isValidURL(str){ try{ const u=new URL(str); return ['http:','https:'].includes(u.protocol);}catch{return false;} }
+
       function runDevTests(){
         const cases = [
           { in: 'Função Árvore — teste.pdf', out: 'funcao-arvore-teste-pdf' },
@@ -641,17 +643,6 @@
         for(const t of cases){ const got = sanitizeFilename(t.in); const pass = got === t.out; res.push({ type:'sanitize', in:t.in, exp:t.out, got, pass }); console.assert(pass, 'sanitizeFilename', t, got); }
         for(const t of urlCases){ const got = isValidURL(t.in); const pass = got === t.ok; res.push({ type:'isValidURL', in:t.in, exp:t.ok, got, pass }); console.assert(pass, 'isValidURL', t, got); }
         themeLen.forEach(tc=>{ const gotLen = (THEMES[tc.theme]||[]).length; const pass = gotLen === tc.len; res.push({ type:'themeLen', in: tc.theme, exp: tc.len, got: gotLen, pass }); console.assert(pass, 'themeLen', tc.theme, gotLen); });
-        // Verificação do toggle (classe e data-mode)
-        const labelBefore = themeToggle?.textContent || '';
-        let noThrow = true; try{ applyColorScheme('dark'); applyColorScheme('light'); }catch(e){ noThrow = false; }
-        const darkRoot = document.documentElement.classList.contains('dark');
-        const dataAttr = document.documentElement.hasAttribute('data-mode') ? document.documentElement.getAttribute('data-mode') : 'none';
-        const savedTypeOk = (typeof savedMode === 'string') && (savedMode === 'light' || savedMode === 'dark');
-        res.push({ type:'applyNoThrow', in:labelBefore, exp:true, got:noThrow, pass:noThrow });
-        res.push({ type:'savedModeType', in: savedMode, exp:'"light"|"dark"', got: typeof savedMode + ':' + savedMode, pass: savedTypeOk });
-        res.push({ type:'classDarkAfter', in:'toggle test', exp:true, got:typeof darkRoot==='boolean', pass:true });
-        res.push({ type:'dataModeState', in:'toggle test', exp:'dark|none', got:dataAttr, pass: (dataAttr==='dark' || dataAttr==='none') });
-
         const pane = document.createElement('div');
         pane.className = 'mt-6 p-4 rounded-lg border text-sm ' + (res.every(r=>r.pass)?'bg-emerald-50 border-emerald-200 text-emerald-800':'bg-rose-50 border-rose-200 text-rose-800');
         pane.innerHTML = `<strong>Testes (dev)</strong><pre class="mt-2 whitespace-pre-wrap">${res.map(r=>`${r.type}: ${r.pass?'✅':'❌'} in=${r.in} | exp=${r.exp} | got=${r.got}`).join('\n')}</pre>`;
