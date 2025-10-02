@@ -3,42 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Atividade - 01: Geometria Plana – Formulário Automatizado</title>
 
-  <!-- Tailwind via CDN: configure SEMPRE em window.tailwind.config antes do script -->
-  <script>
-    window.tailwind = window.tailwind || {};
-    window.tailwind.config = {
-      darkMode: 'class',
-      corePlugins: { preflight: false }
-    };
-  </script>
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Libs -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-
-  <style>
-    .error { border-color: #ef4444 !important; }
-    button:disabled { opacity:.6; cursor:not-allowed; }
-
-    /* ===== Fallbacks modo escuro (baseados em atributo no <html>) ===== */
-    html[data-mode="dark"] body { background-color:#0f172a !important; color:#e2e8f0 !important; }
-    html[data-mode="dark"] .bg-white { background-color:#0b1220 !important; }
-    html[data-mode="dark"] .bg-slate-50 { background-color:#0f172a !important; }
-    html[data-mode="dark"] .text-slate-700, html[data-mode="dark"] .text-slate-800 { color:#e2e8f0 !important; }
-    html[data-mode="dark"] .border-slate-200, html[data-mode="dark"] .border-slate-300 { border-color:#334155 !important; }
-    html[data-mode="dark"] input, html[data-mode="dark"] textarea, html[data-mode="dark"] select { background-color:#0b1220 !important; color:#e2e8f0 !important; border-color:#334155 !important; }
-
-    /* ===== GUARDA-CHUVA de legibilidade para o MODO CLARO =====
-       Garante que, ao voltar ao claro, o texto e o fundo fiquem legíveis
-       mesmo que alguma lib ou versão antiga tenha deixado estilos inline. */
-    html:not(.dark) body {
-      color: #1f2937 !important;          /* slate-800 */
-      background-color: #f8fafc !important; /* slate-50 */
-    }
-  </style>
 </head>
 <body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100">
   <div class="max-w-3xl mx-auto p-6">
