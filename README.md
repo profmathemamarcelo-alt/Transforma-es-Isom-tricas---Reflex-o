@@ -10,7 +10,7 @@
     window.tailwind = window.tailwind || {};
     window.tailwind.config = {
       darkMode: 'class',
-      corePlugins: { preflight: false } /* mantenho como você usou */
+      corePlugins: { preflight: false }
     };
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -22,13 +22,22 @@
   <style>
     .error { border-color: #ef4444 !important; }
     button:disabled { opacity:.6; cursor:not-allowed; }
-    /* Fallbacks independentes do Tailwind para modo escuro (com !important) */
+
+    /* ===== Fallbacks modo escuro (baseados em atributo no <html>) ===== */
     html[data-mode="dark"] body { background-color:#0f172a !important; color:#e2e8f0 !important; }
     html[data-mode="dark"] .bg-white { background-color:#0b1220 !important; }
     html[data-mode="dark"] .bg-slate-50 { background-color:#0f172a !important; }
     html[data-mode="dark"] .text-slate-700, html[data-mode="dark"] .text-slate-800 { color:#e2e8f0 !important; }
     html[data-mode="dark"] .border-slate-200, html[data-mode="dark"] .border-slate-300 { border-color:#334155 !important; }
     html[data-mode="dark"] input, html[data-mode="dark"] textarea, html[data-mode="dark"] select { background-color:#0b1220 !important; color:#e2e8f0 !important; border-color:#334155 !important; }
+
+    /* ===== GUARDA-CHUVA de legibilidade para o MODO CLARO =====
+       Garante que, ao voltar ao claro, o texto e o fundo fiquem legíveis
+       mesmo que alguma lib ou versão antiga tenha deixado estilos inline. */
+    html:not(.dark) body {
+      color: #1f2937 !important;          /* slate-800 */
+      background-color: #f8fafc !important; /* slate-50 */
+    }
   </style>
 </head>
 <body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100">
@@ -108,7 +117,7 @@
     </div>
 
     <div id="login-modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center p-4">
-      <div class="w-full max-w-sm bg-white dark:bg-slate-8 00 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-xl">
+      <div class="w-full max-w-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-xl">
         <h2 class="text-lg font-semibold mb-3">Acesso do Administrador</h2>
         <label class="block text-sm mb-1">Código de administrador</label>
         <div class="flex gap-2">
@@ -131,23 +140,30 @@
       const $ = (s)=>document.querySelector(s);
 
       /* ========================
-       * 0) Tema Claro/Escuro persistente (FIX: classe só no <html>)
+       * 0) Tema Claro/Escuro (corrigido com limpeza de inline styles)
        * ======================== */
       const THEME_KEY = 'atividadeThemeMode';
       const themeToggle = $('#theme-toggle');
 
       function applyColorScheme(mode){
         const root = document.documentElement; // <html>
+        const body = document.body;
         const isDark = mode === 'dark';
 
         // Tailwind dark mode: só no <html>
         root.classList.toggle('dark', isDark);
 
-        // Fallback CSS com data-attr (usado nos seletores html[data-mode="dark"] ...)
+        // Atributo para fallbacks CSS
         if (isDark) root.setAttribute('data-mode','dark');
         else root.removeAttribute('data-mode');
 
-        // Texto e aria-state do botão
+        // 🔥 Limpeza de estilos inline que poderiam manter o texto branco
+        if (!isDark) {
+          body.style.color = '';
+          body.style.backgroundColor = '';
+        }
+
+        // Rótulo do botão
         if (themeToggle){
           themeToggle.textContent = isDark ? 'Tema: Escuro' : 'Tema: Claro';
           themeToggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
@@ -156,16 +172,14 @@
         try{ localStorage.setItem(THEME_KEY, mode); }catch{}
       }
 
-      // Sempre iniciar em Claro; só usa salvo se existir
+      // Sempre começar em Claro; só usa salvo se existir explicitamente
       let savedMode = 'light';
       try{
         const stored = localStorage.getItem(THEME_KEY);
         if (stored === 'dark' || stored === 'light') savedMode = stored;
       }catch{}
-
       applyColorScheme(savedMode);
 
-      // Clique direto no botão (sem listener duplicado no document)
       themeToggle?.addEventListener('click', ()=>{
         const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
         applyColorScheme(next);
@@ -614,11 +628,8 @@
       });
 
       /* ========================
-       * 6) Testes rápidos (dev)
+       * 6) Testes rápidos (dev) — opcional
        * ======================== */
-      function sanitizeFilename(str){ return (str||'').normalize('NFD').replace(/[^\w\s-]/g,'').trim().replace(/\s+/g,'-').toLowerCase(); }
-      function isValidURL(str){ try{ const u=new URL(str); return ['http:','https:'].includes(u.protocol);}catch{return false;} }
-
       function runDevTests(){
         const cases = [
           { in: 'Função Árvore — teste.pdf', out: 'funcao-arvore-teste-pdf' },
@@ -640,6 +651,8 @@
           { theme: 'Polígonos – Propriedades e Medidas', len: 10 }
         ];
         const res = [];
+        function sanitizeFilename(str){ return (str||'').normalize('NFD').replace(/[^\w\s-]/g,'').trim().replace(/\s+/g,'-').toLowerCase(); }
+        function isValidURL(str){ try{ const u=new URL(str); return ['http:','https:'].includes(u.protocol);}catch{return false;} }
         for(const t of cases){ const got = sanitizeFilename(t.in); const pass = got === t.out; res.push({ type:'sanitize', in:t.in, exp:t.out, got, pass }); console.assert(pass, 'sanitizeFilename', t, got); }
         for(const t of urlCases){ const got = isValidURL(t.in); const pass = got === t.ok; res.push({ type:'isValidURL', in:t.in, exp:t.ok, got, pass }); console.assert(pass, 'isValidURL', t, got); }
         themeLen.forEach(tc=>{ const gotLen = (THEMES[tc.theme]||[]).length; const pass = gotLen === tc.len; res.push({ type:'themeLen', in: tc.theme, exp: tc.len, got: gotLen, pass }); console.assert(pass, 'themeLen', tc.theme, gotLen); });
