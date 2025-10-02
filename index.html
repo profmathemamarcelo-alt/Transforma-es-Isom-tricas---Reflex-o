@@ -33,8 +33,8 @@
 
     /* ===== GUARDA-CHUVA de legibilidade para o MODO CLARO ===== */
     html:not(.dark) body {
-      color: #1f2937 !important;          /* slate-800 */
-      background-color: #f8fafc !important; /* slate-50 */
+      color: #1f2937 !important;            /* slate-800 */
+      background-color: #f8fafc !important; /* slate-50  */
     }
   </style>
 </head>
@@ -138,7 +138,7 @@
       const $ = (s)=>document.querySelector(s);
 
       /* ========================
-       * 0) Tema Claro/Escuro (corrigido com limpeza de inline styles)
+       * 0) Tema Claro/Escuro (corrigido + legibilidade)
        * ======================== */
       const THEME_KEY = 'atividadeThemeMode';
       const themeToggle = $('#theme-toggle');
@@ -147,46 +147,143 @@
         const root = document.documentElement; // <html>
         const body = document.body;
         const isDark = mode === 'dark';
-
-        // Tailwind dark mode: só no <html>
         root.classList.toggle('dark', isDark);
-
-        // Atributo para fallbacks CSS
-        if (isDark) root.setAttribute('data-mode','dark');
-        else root.removeAttribute('data-mode');
-
-        // Limpa possíveis estilos inline remanescentes no modo claro
-        if (!isDark) {
-          body.style.color = '';
-          body.style.backgroundColor = '';
-        }
-
-        // Rótulo do botão
+        if (isDark) root.setAttribute('data-mode','dark'); else root.removeAttribute('data-mode');
+        if (!isDark){ body.style.color = ''; body.style.backgroundColor = ''; }
         if (themeToggle){
           themeToggle.textContent = isDark ? 'Tema: Escuro' : 'Tema: Claro';
           themeToggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
         }
-
         try{ localStorage.setItem(THEME_KEY, mode); }catch{}
       }
-
-      // Sempre começar em Claro; só usa salvo se existir explicitamente
       let savedMode = 'light';
-      try{
-        const stored = localStorage.getItem(THEME_KEY);
-        if (stored === 'dark' || stored === 'light') savedMode = stored;
-      }catch{}
+      try{ const s = localStorage.getItem(THEME_KEY); if(s==='dark'||s==='light') savedMode = s; }catch{}
       applyColorScheme(savedMode);
-
-      themeToggle?.addEventListener('click', ()=>{
-        const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
-        applyColorScheme(next);
-      });
+      themeToggle?.addEventListener('click', ()=> applyColorScheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark'));
 
       /* ========================
-       * 1) Modo Admin (senha: 3121@Lu)
+       * 1) Questões dinâmicas — inicializar cedo e com paraquedas
        * ======================== */
       const ADMIN_STORAGE_KEY = 'atividadeTemaSelecionado';
+
+      const THEMES = {
+        "Geometria Plana": [
+          "Escreva o nome do polígono:",
+          "Quantos vértices, lados e ângulos internos ele tem?",
+          "Qual a área e o perímetro do polígono?",
+          "Qual o comando você usou para construir seu polígono no GeoGebra?",
+          "Descreva uma aplicação prática de polígonos no cotidiano.",
+          "Apresente uma transformação (reflexão/rotação/translação) aplicada à sua figura.",
+          "Cite uma propriedade métrica relevante utilizada.",
+          "Explique um desafio que enfrentou e como solucionou.",
+          "Relacione o tema com outro conteúdo da Matemática.",
+          "Referencie um link (GeoGebra/arquivo) do seu trabalho."
+        ],
+        "Transformações Isométricas – Reflexão no GeoGebra": [
+          "Escreva o nome do polígono:",
+          "Quantos vértices, lados e ângulos internos ele tem?",
+          "Qual a área e o perímetro do polígono?",
+          "Qual o comando você usou para construir seu polígono no GeoGebra?",
+          "Quantas reflexões você gerou?",
+          "A reflexão teve o quê como referência, para ser aplicada?",
+          "Que tipo de comando você usou para criar a reflexão?",
+          "Você assistiu o vídeo de orientação, para realizar a atividade?",
+          "Relacione a atividade com uma prática real de reflexão geométrica.",
+          "Descreva, em poucas palavras, os passos que você fez para construir a reflexão no GeoGebra."
+        ],
+        "Função Afim – Modelagem e Gráfico": [
+          "Escreva a lei da função afim f(x)=ax+b relacionada ao seu contexto:",
+          "Identifique os coeficientes a (inclinação) e b (intercepto) e interprete:",
+          "Calcule f(0), f(1) e f(2). Interprete os resultados.",
+          "Determine as raízes e o ponto onde f(x)=10.",
+          "Esboce (ou descreva) o gráfico. Crescente ou decrescente? Por quê?",
+          "Indique duas variações de a e explique como o gráfico muda.",
+          "Cite uma limitação do seu modelo e uma possível melhoria.",
+          "No GeoGebra, qual comando usou para criar o gráfico?",
+          "Explique como verificou o ajuste do modelo aos dados.",
+          "Relacione a função a um caso real (economia, física, cotidiano)."
+        ],
+        "Polígonos – Propriedades e Medidas": [
+          "Nome do polígono e classificação (convexo/não convexo, regular/irregular):",
+          "Número de lados, vértices e diagonais. Mostre o cálculo.",
+          "Soma dos ângulos internos. Qual a medida de cada ângulo interno se for regular?",
+          "Perímetro e área. Informe as unidades e o método utilizado.",
+          "Construção no GeoGebra: quais comandos você usou?",
+          "Transformações (simetria, rotação, translação) observadas na figura.",
+          "Relações métricas relevantes (teorema, fórmula) aplicadas.",
+          "Aplicações práticas desse polígono em engenharia/arte/design.",
+          "Desafios encontrados e como você solucionou.",
+          "Referência/Link do seu arquivo no GeoGebra."
+        ]
+      };
+
+      const questionsArea = document.querySelector('#questions-area');
+      const temaInput = document.querySelector('#tema-input');
+      const temaForm = document.querySelector('#tema-form');
+      const pageTitle = document.querySelector('#page-title');
+      const btnGerar = document.querySelector('#btn-gerar');
+      const btnSalvarTema = document.querySelector('#btn-salvar-tema');
+      const adminMsg = document.querySelector('#admin-msg');
+
+      function genericQuestions(theme){
+        const t = (theme||'seu tema');
+        return [
+          `Defina, em uma frase, o assunto: ${t}.`,
+          `Liste 3 conceitos-chave relacionados a ${t}.`,
+          `Apresente um exemplo prático onde ${t} é aplicado.`,
+          `Descreva o processo/algoritmo principal associado a ${t}.`,
+          `Cite uma possível dificuldade conceitual em ${t} e como superá-la.`,
+          `Indique um comando/ferramenta no GeoGebra (ou similar) que ajude em ${t}.`,
+          `Relacione ${t} com outro tópico da Matemática.`,
+          `Crie uma pequena investigação/experimento sobre ${t}.`,
+          `Explique como avaliaria a aprendizagem de ${t}.`,
+          `Anexe/indique um link (GeoGebra/arquivo) que registre sua atividade sobre ${t}.`
+        ];
+      }
+      function renderQuestions(labels){
+        if(!questionsArea) return;
+        questionsArea.innerHTML = '';
+        labels.forEach((label, idx)=>{
+          const wrapper = document.createElement('div');
+          const qNum = idx+1;
+          wrapper.innerHTML = `
+            <div>
+              <label class="block text-sm font-medium">${qNum}) ${label}</label>
+              <input type="text" name="q${qNum}" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 px-3 py-2 rounded-md" required />
+            </div>
+          `;
+          questionsArea.appendChild(wrapper);
+        });
+      }
+      function applyQuestionTheme(theme){
+        const labels = (theme && THEMES[theme]) ? [...THEMES[theme]] : genericQuestions(theme);
+        renderQuestions(labels);
+        if(theme){
+          if(temaForm) temaForm.value = theme;
+          if(pageTitle) pageTitle.textContent = `Atividade de Matemática – ${theme}`;
+          document.title = `Atividade – ${theme}`;
+        }
+      }
+
+      // Inicialização imediata e segura
+      (function initQuestionsSafe(){
+        try{
+          const defaultTheme = "Geometria Plana";
+          const savedThemeName = localStorage.getItem(ADMIN_STORAGE_KEY);
+          applyQuestionTheme(savedThemeName || defaultTheme);
+        }catch(e){
+          console.error('[init questions] falhou:', e);
+          if (questionsArea){
+            questionsArea.innerHTML = `<div class="p-3 text-sm rounded-md bg-rose-50 border border-rose-200 text-rose-700">
+              Não foi possível carregar as questões automaticamente. Recarregue a página.
+            </div>`;
+          }
+        }
+      })();
+
+      /* ========================
+       * 2) Modo Admin (senha: 3121@Lu)
+       * ======================== */
       const ADMIN_OK_KEY = 'atividadeAdminOK';
       const ADMIN_CODE = '3121@Lu';
 
@@ -214,7 +311,6 @@
         }
       }
       function isAdmin(){ return sessionStorage.getItem(ADMIN_OK_KEY) === '1'; }
-
       function openLogin(){ loginModal?.classList.remove('hidden'); loginModal?.classList.add('flex'); loginMsg?.classList.add('hidden'); if(adminPass){ adminPass.value=''; adminPass.type='password'; adminPass.focus(); } }
       function closeLogin(){ loginModal?.classList.add('hidden'); loginModal?.classList.remove('flex'); }
 
@@ -233,60 +329,6 @@
       setAdminUI(isAdmin());
       btnLogout?.addEventListener('click', ()=>{ try{ sessionStorage.removeItem(ADMIN_OK_KEY); }catch{} setAdminUI(false); });
 
-      /* ========================
-       * 2) Catálogo de Temas
-       * ======================== */
-      const THEMES = {
-        "Geometria Plana": [
-          "Escreva o nome do polígono:",
-          "Quantos vértices, lados e ângulos internos ele tem?",
-          "Qual a área e o perímetro do polígono?",
-          "Qual o comando você usou para construir seu polígono no GeoGebra?",
-          "Descreva uma aplicação prática de polígonos no cotidiano.",
-          "Apresente uma transformação (reflexão/rotação/translação) aplicada à sua figura.",
-          "Cite uma propriedade métrica relevante utilizada.",
-          "Explique um desafio que enfrentou e como solucionou.",
-          "Relacione o tema com outro conteúdo da Matemática.",
-          "Referencie um link (GeoGebra/arquivo) do seu trabalho."
-        ],
-        "Transformações Isométricas – Reflexão no GeoGebra": [
-          "Escreva o nome do polígono:",
-          "Quantos vértices, lados e ângulos internos ele tem?",
-          "Qual a área e o perímetro do polígono?",
-          "Qual o comando você usou para construir seu polígono no GeoGebra?",
-          "Quantas reflexões você gerou?",
-          "A reflexão teve o quê como referência, para ser aplicada?",
-          "Que tipo de comando você usou para criar a reflexão?",
-          "Você assistiu o vídeo de orientação, para realizar a atividade?",
-          "Relacione a atividade realizada com alguma prática real. Onde usamos reflexão geométrica?",
-          "Descreva, em poucas palavras, os passos que você fez para construir a reflexão poligonal no GeoGebra."
-        ],
-        "Função Afim – Modelagem e Gráfico": [
-          "Escreva a lei da função afim f(x)=ax+b relacionada ao seu contexto:",
-          "Identifique os coeficientes a (inclinação) e b (intercepto). O que significam no contexto?",
-          "Calcule f(0), f(1) e f(2). Interprete os resultados.",
-          "Determine as raízes e o ponto onde f(x)=10.",
-          "Esboce (ou descreva) o gráfico. Crescente ou decrescente? Por quê?",
-          "Indique duas variações de a e explique como o gráfico muda.",
-          "Cite uma limitação do seu modelo e uma possível melhoria.",
-          "No GeoGebra, qual comando usou para criar o gráfico?",
-          "Explique como verificou o ajuste do modelo aos dados.",
-          "Relacione a função a um caso real (economia, física, cotidiano)."
-        ],
-        "Polígonos – Propriedades e Medidas": [
-          "Nome do polígono e classificação (convexo/não convexo, regular/irregular):",
-          "Número de lados, vértices e diagonais. Mostre o cálculo.",
-          "Soma dos ângulos internos. Qual a medida de cada ângulo interno se for regular?",
-          "Perímetro e área. Informe as unidades e o método utilizado.",
-          "Construção no GeoGebra: quais comandos você usou?",
-          "Transformações (simetria, rotação, translação) observadas na figura.",
-          "Relações métricas relevantes (teorema, fórmula) aplicadas.",
-          "Aplicações práticas desse polígono em engenharia/arte/design.",
-          "Desafios encontrados e como você solucionou.",
-          "Referência/Link do seu arquivo no GeoGebra."
-        ]
-      };
-
       const temasDatalist = document.querySelector('#temas-datalist');
       function refreshDatalist(){
         if(!temasDatalist) return;
@@ -296,6 +338,26 @@
         }
       }
       refreshDatalist();
+
+      btnGerar?.addEventListener('click', ()=>{
+        if(!isAdmin()) return;
+        const val = (temaInput?.value||'').trim();
+        if(!val){ temaInput?.focus(); return; }
+        let matchedKey = Object.keys(THEMES).find(k => k.toLowerCase() === val.toLowerCase());
+        if(!matchedKey){
+          const lk = val.toLowerCase();
+          matchedKey = Object.keys(THEMES).find(k=> lk.includes(k.toLowerCase().split(' – ')[0]));
+        }
+        applyQuestionTheme(matchedKey || val);
+      });
+
+      btnSalvarTema?.addEventListener('click', ()=>{
+        if(!isAdmin()) return;
+        const themeName = (temaForm?.value||'').trim();
+        if(!themeName){ if(adminMsg) adminMsg.textContent = 'Defina um tema antes de salvar.'; return; }
+        localStorage.setItem(ADMIN_STORAGE_KEY, themeName);
+        if(adminMsg){ adminMsg.textContent = 'Tema salvo para os usuários.'; setTimeout(()=> adminMsg.textContent = '', 2000); }
+      });
 
       /* ========================
        * 3) Utilitários
@@ -332,7 +394,7 @@
           const fn = window.QRCode && window.QRCode.toCanvas; 
           if(!fn) return Promise.reject(new Error('toCanvas indisponível'));
           const maybe = fn(canvas, text, opts);
-        if (maybe && typeof maybe.then==='function') return maybe;
+          if (maybe && typeof maybe.then==='function') return maybe;
           return new Promise((resolve, reject)=> fn(canvas, text, opts, (err)=> err?reject(err):resolve()));
         }catch(e){ return Promise.reject(e); }
       }
@@ -361,15 +423,254 @@
       }
 
       /* ========================
-       * 4) Questões dinâmicas
+       * 4) QR + PDF + compartilhamento
        * ======================== */
-      const questionsArea = document.querySelector('#questions-area');
-      const temaInput = document.querySelector('#tema-input');
-      const temaForm = document.querySelector('#tema-form');
-      const pageTitle = document.querySelector('#page-title');
-      const btnGerar = document.querySelector('#btn-gerar');
-      const btnSalvarTema = document.querySelector('#btn-salvar-tema');
-      const adminMsg = document.querySelector('#admin-msg');
+      const form=document.querySelector('#atividade-form');
+      const linkInput=document.querySelector('#q10-link');
+      const qrCanvas=document.querySelector('#qrcode');
+      const urlHelp=document.querySelector('#url-help');
+      const qrMsg=document.querySelector('#qr-msg');
+      const downloadArea=document.querySelector('#download-area');
+      const downloadLink=document.querySelector('#download-link');
+      const downloadOpen=document.querySelector('#download-open');
+      const submitBtn=document.querySelector('#btn-enviar');
+      const shareBtn=document.querySelector('#share-btn');
+      const shareWhats=document.querySelector('#share-whats');
+      const copyPageBtn=document.querySelector('#copy-page-link');
 
-      function genericQuestions(theme){
-        const t = (theme||'seu tema');
+      let qrImageDataURL='';
+      let currentPdfUrl=null;
+      const isiOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+
+      async function regenerateQR(){
+        try{
+          qrImageDataURL=''; if (qrMsg){ qrMsg.classList.add('hidden'); qrMsg.textContent=''; }
+          const val=(linkInput?.value||'').trim();
+          if(!val){ urlHelp && urlHelp.classList.remove('hidden'); linkInput?.classList.add('error'); clearCanvas(qrCanvas); if(submitBtn) submitBtn.disabled=true; return; }
+          if(!isValidURL(val)){
+            urlHelp && urlHelp.classList.remove('hidden'); linkInput?.classList.add('error'); clearCanvas(qrCanvas); if(submitBtn) submitBtn.disabled=true; return;
+          }
+          urlHelp && urlHelp.classList.add('hidden'); linkInput?.classList.remove('error'); if(submitBtn) submitBtn.disabled=true;
+          const attempts = 3; let lastErr=null;
+          for (let i=0;i<attempts;i++){
+            try {
+              await ensureQRCode();
+              qrImageDataURL = await drawQRToCanvas(qrCanvas, val);
+              if (qrImageDataURL){ if(submitBtn) submitBtn.disabled=false; return; }
+            } catch(e){ lastErr=e; await new Promise(r=>setTimeout(r, 200*(i+1))); }
+          }
+          console.error('Falha QR após tentativas:', lastErr);
+          if (qrMsg){ qrMsg.textContent='Falha ao gerar QR. Verifique o link e a conexão, depois tente novamente.'; qrMsg.classList.remove('hidden'); }
+          clearCanvas(qrCanvas);
+          if(submitBtn) submitBtn.disabled=false;
+        }catch(err){ console.error('Erro regenerateQR:', err); }
+      }
+
+      linkInput?.addEventListener('input', regenerateQR);
+      linkInput?.addEventListener('change', regenerateQR);
+      linkInput?.addEventListener('blur', regenerateQR);
+      linkInput?.addEventListener('paste', ()=> setTimeout(regenerateQR,0));
+      document.addEventListener('DOMContentLoaded', async ()=>{ regenerateQR(); });
+
+      form?.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        try{
+          if(!form.checkValidity()){
+            form.reportValidity();
+            return;
+          }
+          const urlVal=(linkInput?.value||'').trim();
+          if(!urlVal || !isValidURL(urlVal)){
+            urlHelp?.classList.remove('hidden'); linkInput?.classList.add('error'); linkInput?.focus();
+            return;
+          }
+          await regenerateQR();
+          if(!qrImageDataURL){
+            if(qrMsg){ qrMsg.textContent = 'Não foi possível gerar o QR Code. Verifique o link e sua conexão e tente novamente.'; qrMsg.classList.remove('hidden'); }
+            linkInput?.focus();
+            return;
+          }
+
+          const fd=new FormData(form); const data={}; fd.forEach((v,k)=>data[k]=v);
+
+          const rendered = Array.from(questionsArea.querySelectorAll('label')).map((lab, idx)=>({
+            key: `q${idx+1}`,
+            label: lab.textContent.replace(/^\d+\)\s*/,'').trim()
+          }));
+
+          const { jsPDF } = window.jspdf || {}; if(!jsPDF){ alert('Biblioteca de PDF (jsPDF) não carregou.'); return; }
+          const doc=new jsPDF({unit:'pt',format:'a4'});
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const pageHeight = doc.internal.pageSize.getHeight();
+          const margin=48; 
+          const usable = pageWidth - 2*margin; 
+          let y=margin;
+          doc.setLineHeightFactor(1.2);
+
+          const temaHeading = (data['tema']||'Atividade');
+
+          // ======= HEADER ROBUSTO (título longo não sobrepõe data) =======
+          const titleStr = `Atividade – ${pdfSafe(temaHeading)}`;
+          const dateStr  = 'Data: ' + new Date().toLocaleDateString('pt-BR');
+
+          doc.setFont('helvetica','normal'); doc.setFontSize(11);
+          const dateW = doc.getTextWidth(dateStr);
+          const gapX = 12;
+
+          doc.setFont('helvetica','bold'); doc.setFontSize(16);
+          const titleLinesFull = doc.splitTextToSize(titleStr, usable);
+          const firstLine = titleLinesFull[0] || '';
+          const firstLineW = doc.getTextWidth(firstLine);
+
+          if (firstLineW + dateW + gapX <= usable) {
+            const titleLines = doc.splitTextToSize(titleStr, usable - (dateW + gapX));
+            doc.text(titleLines, margin, y + 12);
+            doc.setFont('helvetica','normal'); doc.setFontSize(11);
+            doc.text(dateStr, pageWidth - margin, y + 12, { align: 'right' });
+            const titleBlockH = 16 * 1.2 * titleLines.length;
+            y += Math.max(40, titleBlockH + 24);
+          } else {
+            doc.text(titleLinesFull, margin, y + 12);
+            const titleBlockH = 16 * 1.2 * titleLinesFull.length;
+            doc.setFont('helvetica','normal'); doc.setFontSize(11);
+            doc.text(dateStr, pageWidth - margin, y + 12 + titleBlockH + 6, { align: 'right' });
+            y += titleBlockH + 32;
+          }
+          // ================================================================
+
+          function addPageIfNeeded(extra=0){
+            if (y + extra > pageHeight - margin){
+              doc.addPage();
+              y = margin;
+            }
+          }
+
+          function writeField(label, value){
+            doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(0);
+            const labelLines = doc.splitTextToSize(pdfSafe(label), usable);
+            for (const ln of labelLines){ addPageIfNeeded(14); doc.text(ln, margin, y); y += 14; }
+
+            doc.setFont('helvetica','normal'); doc.setFontSize(11);
+            const valueText = (value ?? '—').toString();
+            const valueLines = doc.splitTextToSize(pdfSafe(valueText), usable);
+            for (const ln of valueLines){ addPageIfNeeded(18); doc.text(ln, margin, y); y += 18; }
+
+            y += 6; addPageIfNeeded();
+          }
+
+          writeField('Nome', data['nome']||'');
+          writeField('Turma', data['turma']||'');
+          rendered.forEach((f, i)=>{ writeField(`${i+1}) ${f.label}`, data[f.key] || ''); });
+
+          writeField('Link do recurso', data['q10-link']);
+          if(qrImageDataURL){ 
+            try{ 
+              const qrW = 120, qrH = 120;
+              if (y + qrH > pageHeight - margin) { doc.addPage(); y = margin; }
+              doc.addImage(qrImageDataURL,'PNG',pageWidth - margin - qrW, y-16, qrW, qrH); 
+              y += qrH;
+            }catch(e){ console.warn('QR no PDF:', e); } 
+          }
+
+          doc.setFontSize(9); doc.setTextColor(120);
+          if (y + 20 > pageHeight - margin){ doc.addPage(); y = margin; }
+          doc.text('Gerado automaticamente pelo formulário do Prof. Marcelo P. Antônio', margin, pageHeight - margin/2);
+
+          const filename = `atividade-${sanitizeFilename(temaHeading)}-${sanitizeFilename(data.turma)}-${sanitizeFilename(data.nome)}.pdf`;
+          try{
+            const blob = doc.output('blob');
+            if(currentPdfUrl) { try{ URL.revokeObjectURL(currentPdfUrl); }catch(e){} }
+            currentPdfUrl = URL.createObjectURL(blob);
+            downloadLink.href = currentPdfUrl; 
+            downloadLink.target = "_blank";
+            downloadLink.rel = "noopener";
+            downloadLink.download = filename; 
+            downloadLink.textContent = filename;
+            downloadArea?.classList.remove('hidden');
+
+            if(isiOS){ window.open(currentPdfUrl, '_blank'); }
+            else { const a=document.createElement('a'); a.href=currentPdfUrl; a.target="_blank"; a.rel="noopener"; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); }
+          }catch(err){ console.error('Falha no download do PDF:', err); try{ doc.save(filename); }catch(e){} }
+        }catch(err){ console.error('Erro no submit:', err); }
+      });
+
+      downloadOpen?.addEventListener('click', ()=>{ if(currentPdfUrl) window.open(currentPdfUrl, '_blank'); });
+      shareBtn?.addEventListener('click', async ()=>{
+        if(!currentPdfUrl) return;
+        try{
+          const res = await fetch(currentPdfUrl);
+          const blob = await res.blob();
+          const file = new File([blob], (downloadLink?.download || 'atividade.pdf'), { type: 'application/pdf' });
+          if(navigator.canShare && navigator.canShare({ files: [file] })){
+            await navigator.share({ files: [file], title: 'Atividade – PDF', text: 'Envio do PDF da atividade' });
+          } else if(navigator.share){
+            await navigator.share({ title: 'Atividade – PDF', url: currentPdfUrl });
+          } else {
+            alert('Compartilhamento nativo não suportado neste navegador. Use o botão Abrir e envie manualmente.');
+          }
+        } catch(e){ console.error('Compartilhar falhou', e); alert('Não foi possível compartilhar o PDF. Tente abrir e enviar manualmente.'); }
+      });
+
+      // WhatsApp dedicado (com fallback para wa.me)
+      shareWhats?.addEventListener('click', async ()=>{
+        if(!currentPdfUrl) return;
+        const filename = downloadLink?.download || 'atividade.pdf';
+        const texto = encodeURIComponent(`Atividade – PDF: ${filename}`);
+        try{
+          const res = await fetch(currentPdfUrl); const blob = await res.blob();
+          const file = new File([blob], filename, { type: 'application/pdf' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })){
+            await navigator.share({ files: [file], title: 'WhatsApp', text: 'Segue o PDF da atividade' });
+            return;
+          }
+        }catch(e){ console.warn('Share file não suportado, usando wa.me', e); }
+        const waURL = `https://wa.me/?text=${texto}%20${encodeURIComponent(currentPdfUrl)}`;
+        window.open(waURL, '_blank');
+      });
+
+      copyPageBtn?.addEventListener('click', async ()=>{
+        try{ await navigator.clipboard.writeText(location.href); copyPageBtn.textContent = 'Link copiado!'; setTimeout(()=> copyPageBtn.textContent='Copiar link da página', 2000); }
+        catch{ alert('Não foi possível copiar. Copie manualmente o endereço da barra do navegador.'); }
+      });
+
+      /* ========================
+       * 6) Testes rápidos (dev) — opcional
+       * ======================== */
+      function runDevTests(){
+        const cases = [
+          { in: 'Função Árvore — teste.pdf', out: 'funcao-arvore-teste-pdf' },
+          { in: ' João  da Silva ', out: 'joao-da-silva' },
+          { in: 'Turma 3B / 2025', out: 'turma-3b-2025' },
+          { in: 'ÁÉÍÓÚ ç ã õ', out: 'aeiou-c-a-o' }
+        ];
+        const urlCases = [
+          { in: 'https://example.com', ok: true },
+          { in: 'http://localhost:3000', ok: true },
+          { in: 'notaURL', ok: false },
+          { in: 'ftp://site.com', ok: false },
+          { in: 'https://exemplo.com/recurso?id=10&ref=abc', ok: true }
+        ];
+        const themeLen = [
+          { theme: 'Geometria Plana', len: 10 },
+          { theme: 'Transformações Isométricas – Reflexão no GeoGebra', len: 10 },
+          { theme: 'Função Afim – Modelagem e Gráfico', len: 10 },
+          { theme: 'Polígonos – Propriedades e Medidas', len: 10 }
+        ];
+        const res = [];
+        function sanitizeFilename(str){ return (str||'').normalize('NFD').replace(/[^\w\s-]/g,'').trim().replace(/\s+/g,'-').toLowerCase(); }
+        function isValidURL(str){ try{ const u=new URL(str); return ['http:','https:'].includes(u.protocol);}catch{return false;} }
+        for(const t of cases){ const got = sanitizeFilename(t.in); const pass = got === t.out; res.push({ type:'sanitize', in:t.in, exp:t.out, got, pass }); console.assert(pass, 'sanitizeFilename', t, got); }
+        for(const t of urlCases){ const got = isValidURL(t.in); const pass = got === t.ok; res.push({ type:'isValidURL', in:t.in, exp:t.ok, got, pass }); console.assert(pass, 'isValidURL', t, got); }
+        themeLen.forEach(tc=>{ const gotLen = (THEMES[tc.theme]||[]).length; const pass = gotLen === tc.len; res.push({ type:'themeLen', in: tc.theme, exp: tc.len, got: gotLen, pass }); console.assert(pass, 'themeLen', tc.theme, gotLen); });
+        const pane = document.createElement('div');
+        pane.className = 'mt-6 p-4 rounded-lg border text-sm ' + (res.every(r=>r.pass)?'bg-emerald-50 border-emerald-200 text-emerald-800':'bg-rose-50 border-rose-200 text-rose-800');
+        pane.innerHTML = `<strong>Testes (dev)</strong><pre class="mt-2 whitespace-pre-wrap">${res.map(r=>`${r.type}: ${r.pass?'✅':'❌'} in=${r.in} | exp=${r.exp} | got=${r.got}`).join('\n')}</pre>`;
+        document.querySelector('.max-w-3xl')?.appendChild(pane);
+      }
+      if(new URLSearchParams(location.search).get('dev') === '1'){ runDevTests(); }
+
+    }catch(err){ console.error('Erro global:', err); }
+  })();
+  </script>
+</body>
+</html>
