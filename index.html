@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Atividade - 01: Geometria Plana – Formulário Automatizado</title>
+  <title>Atividade – Formulário Automatizado</title>
 
   <!-- Tailwind via CDN: configure SEMPRE em window.tailwind.config antes do script -->
   <script>
@@ -115,7 +115,7 @@
     </div>
 
     <div id="login-modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center p-4">
-      <div class="w-full max-w-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-xl">
+      <div class="w-full max-w-sm bg-white dark:bg-slate-8 00 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-xl">
         <h2 class="text-lg font-semibold mb-3">Acesso do Administrador</h2>
         <label class="block text-sm mb-1">Código de administrador</label>
         <div class="flex gap-2">
@@ -162,7 +162,28 @@
       themeToggle?.addEventListener('click', ()=> applyColorScheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark'));
 
       /* ========================
-       * 1) Questões dinâmicas — inicializar cedo e com paraquedas
+       * 1) Compartilhamento por URL (NOVIDADE)
+       * ======================== */
+      const PARAM_THEME = 'tema';
+      function getThemeFromURL(){
+        try {
+          const usp = new URLSearchParams(location.search);
+          const t = usp.get(PARAM_THEME);
+          return t ? t.trim() : '';
+        } catch { return ''; }
+      }
+      function setURLTheme(themeName, replace=true){
+        try {
+          const url = new URL(location.href);
+          if (themeName && themeName.trim()) url.searchParams.set(PARAM_THEME, themeName.trim());
+          else url.searchParams.delete(PARAM_THEME);
+          const meth = replace ? 'replaceState' : 'pushState';
+          history[meth](null, '', url);
+        } catch {}
+      }
+
+      /* ========================
+       * 2) Questões dinâmicas
        * ======================== */
       const ADMIN_STORAGE_KEY = 'atividadeTemaSelecionado';
 
@@ -265,12 +286,20 @@
         }
       }
 
-      // Inicialização imediata e segura
+      // Inicialização imediata e segura (com prioridade para ?tema= na URL)
       (function initQuestionsSafe(){
         try{
           const defaultTheme = "Geometria Plana";
+          const urlThemeName = getThemeFromURL(); // <- 1ª prioridade
           const savedThemeName = localStorage.getItem(ADMIN_STORAGE_KEY);
-          applyQuestionTheme(savedThemeName || defaultTheme);
+
+          const effective = urlThemeName || savedThemeName || defaultTheme;
+          applyQuestionTheme(effective);
+
+          // Se veio da URL e é diferente do salvo, sincroniza o localStorage
+          if (urlThemeName && urlThemeName !== savedThemeName){
+            try { localStorage.setItem(ADMIN_STORAGE_KEY, urlThemeName); } catch {}
+          }
         }catch(e){
           console.error('[init questions] falhou:', e);
           if (questionsArea){
@@ -282,7 +311,7 @@
       })();
 
       /* ========================
-       * 2) Modo Admin (senha: 3121@Lu)
+       * 3) Modo Admin (senha: 3121@Lu)
        * ======================== */
       const ADMIN_OK_KEY = 'atividadeAdminOK';
       const ADMIN_CODE = '3121@Lu';
@@ -355,12 +384,19 @@
         if(!isAdmin()) return;
         const themeName = (temaForm?.value||'').trim();
         if(!themeName){ if(adminMsg) adminMsg.textContent = 'Defina um tema antes de salvar.'; return; }
+
+        // Salva localmente e ATUALIZA A URL para compartilhamento
         localStorage.setItem(ADMIN_STORAGE_KEY, themeName);
-        if(adminMsg){ adminMsg.textContent = 'Tema salvo para os usuários.'; setTimeout(()=> adminMsg.textContent = '', 2000); }
+        setURLTheme(themeName, true); // deixa o link atual com ?tema=...
+
+        if(adminMsg){
+          adminMsg.textContent = 'Tema salvo e link atualizado para compartilhamento.';
+          setTimeout(()=> adminMsg.textContent = '', 2500);
+        }
       });
 
       /* ========================
-       * 3) Utilitários
+       * 4) Utilitários
        * ======================== */
       function isValidURL(str){ try{ const u=new URL(str); return ['http:','https:'].includes(u.protocol);}catch{return false;} }
       function clearCanvas(c){ const ctx=c.getContext('2d'); if(ctx) ctx.clearRect(0,0,c.width,c.height); }
@@ -423,7 +459,7 @@
       }
 
       /* ========================
-       * 4) QR + PDF + compartilhamento
+       * 5) QR + PDF + compartilhamento
        * ======================== */
       const form=document.querySelector('#atividade-form');
       const linkInput=document.querySelector('#q10-link');
