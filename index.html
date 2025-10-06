@@ -36,6 +36,27 @@
       color: #1f2937 !important;            /* slate-800 */
       background-color: #f8fafc !important; /* slate-50  */
     }
+
+    /* ===== Força legibilidade em MODO CLARO nos containers/inputs das questões ===== */
+    html:not(.dark) #atividade-form,
+    html:not(.dark) #tema-form,
+    html:not(.dark) #questions-area,
+    html:not(.dark) #questions-area > div,
+    html:not(.dark) #questions-area input,
+    html:not(.dark) #questions-area textarea,
+    html:not(.dark) #questions-area select {
+      background-color: #ffffff !important;
+      color: #1f2937 !important;        /* texto legível */
+      border-color: #e5e7eb !important; /* borda clara */
+    }
+
+    /* Opcional: corrige campos com auto-preenchimento no claro (Chrome/Edge) */
+    html:not(.dark) input:-webkit-autofill,
+    html:not(.dark) textarea:-webkit-autofill,
+    html:not(.dark) select:-webkit-autofill {
+      -webkit-text-fill-color: #1f2937 !important;
+      -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+    }
   </style>
 </head>
 <body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100">
@@ -63,11 +84,12 @@
           <button id="btn-gerar" type="button" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 w-full">Gerar questões</button>
         </div>
       </div>
-      <div class="flex items-center gap-3 mt-3">
+      <div class="flex flex-wrap items-center gap-3 mt-3">
         <button id="btn-salvar-tema" type="button" class="px-3 py-1.5 text-sm bg-slate-800 text-white rounded-md">Salvar tema p/ usuários</button>
+        <button id="btn-copiar-link" type="button" class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-md">Copiar link p/ alunos</button>
         <span id="admin-msg" class="text-xs text-slate-500"></span>
       </div>
-      <p class="text-xs text-slate-500 mt-2">Somente o administrador vê esta barra. O tema salvo aqui será exibido para os alunos.</p>
+      <p class="text-xs text-slate-500 mt-2">Somente o administrador vê esta barra. O tema salvo/gerado atualiza a URL (com <code>?tema=...</code>). Compartilhe esse link com os alunos para que vejam o mesmo tema.</p>
     </section>
 
     <form id="atividade-form" class="space-y-4 bg-white dark:bg-slate-800 p-6 rounded-xl shadow border border-slate-200 dark:border-slate-700" novalidate>
@@ -147,15 +169,29 @@
         const root = document.documentElement; // <html>
         const body = document.body;
         const isDark = mode === 'dark';
+
         root.classList.toggle('dark', isDark);
         if (isDark) root.setAttribute('data-mode','dark'); else root.removeAttribute('data-mode');
-        if (!isDark){ body.style.color = ''; body.style.backgroundColor = ''; }
+
+        // Força contraste adequado nos principais containers de perguntas (em claro)
+        const formEl = document.getElementById('atividade-form');
+        const qArea  = document.getElementById('questions-area');
+        formEl?.classList.toggle('force-light', !isDark);
+        qArea?.classList.toggle('force-light', !isDark);
+
+        // Reset básico do body em claro
+        if (!isDark){
+          body.style.color = '';
+          body.style.backgroundColor = '';
+        }
+
         if (themeToggle){
           themeToggle.textContent = isDark ? 'Tema: Escuro' : 'Tema: Claro';
           themeToggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
         }
         try{ localStorage.setItem(THEME_KEY, mode); }catch{}
       }
+
       let savedMode = 'light';
       try{ const s = localStorage.getItem(THEME_KEY); if(s==='dark'||s==='light') savedMode = s; }catch{}
       applyColorScheme(savedMode);
@@ -193,12 +229,12 @@
           "Quantos vértices, lados e ângulos internos ele tem?",
           "Qual a área e o perímetro do polígono?",
           "Qual o comando você usou para construir seu polígono no GeoGebra?",
-          "Descreva uma aplicação prática de polígonos no cotidiano.",
-          "Apresente uma transformação (reflexão/rotação/translação) aplicada à sua figura.",
-          "Cite uma propriedade métrica relevante utilizada.",
-          "Explique um desafio que enfrentou e como solucionou.",
-          "Relacione o tema com outro conteúdo da Matemática.",
-          "Referencie um link (GeoGebra/arquivo) do seu trabalho."
+          "Descreva uma aplicação prática de polígonos no cotidiano:",
+          "Apresente uma transformação (reflexão/rotação/translação) aplicada à sua figura:",
+          "Cite uma propriedade métrica relevante utilizada:",
+          "Explique um desafio que enfrentou e como solucionou:",
+          "Relacione o tema com outro conteúdo da Matemática:",
+          "Referencie um link (GeoGebra/arquivo) do seu trabalho:"
         ],
         "Transformações Isométricas – Reflexão no GeoGebra": [
           "Escreva o nome do polígono:",
@@ -209,32 +245,32 @@
           "A reflexão teve o quê como referência, para ser aplicada?",
           "Que tipo de comando você usou para criar a reflexão?",
           "Você assistiu o vídeo de orientação, para realizar a atividade?",
-          "Relacione a atividade com uma prática real de reflexão geométrica.",
-          "Descreva, em poucas palavras, os passos que você fez para construir a reflexão no GeoGebra."
+          "Relacione a atividade com uma prática real de reflexão geométrica:",
+          "Descreva, em poucas palavras, os passos que você fez para construir a reflexão no GeoGebra:"
         ],
         "Função Afim – Modelagem e Gráfico": [
           "Escreva a lei da função afim f(x)=ax+b relacionada ao seu contexto:",
           "Identifique os coeficientes a (inclinação) e b (intercepto) e interprete:",
-          "Calcule f(0), f(1) e f(2). Interprete os resultados.",
-          "Determine as raízes e o ponto onde f(x)=10.",
+          "Calcule f(0), f(1) e f(2). Interprete os resultados:",
+          "Determine as raízes e o ponto onde f(x)=10:",
           "Esboce (ou descreva) o gráfico. Crescente ou decrescente? Por quê?",
-          "Indique duas variações de a e explique como o gráfico muda.",
-          "Cite uma limitação do seu modelo e uma possível melhoria.",
+          "Indique duas variações de a e explique como o gráfico muda:",
+          "Cite uma limitação do seu modelo e uma possível melhoria:",
           "No GeoGebra, qual comando usou para criar o gráfico?",
-          "Explique como verificou o ajuste do modelo aos dados.",
-          "Relacione a função a um caso real (economia, física, cotidiano)."
+          "Explique como verificou o ajuste do modelo aos dados:",
+          "Relacione a função a um caso real (economia, física, cotidiano):"
         ],
         "Polígonos – Propriedades e Medidas": [
           "Nome do polígono e classificação (convexo/não convexo, regular/irregular):",
-          "Número de lados, vértices e diagonais. Mostre o cálculo.",
+          "Número de lados, vértices e diagonais. Mostre o cálculo:",
           "Soma dos ângulos internos. Qual a medida de cada ângulo interno se for regular?",
-          "Perímetro e área. Informe as unidades e o método utilizado.",
+          "Perímetro e área. Informe as unidades e o método utilizado:",
           "Construção no GeoGebra: quais comandos você usou?",
-          "Transformações (simetria, rotação, translação) observadas na figura.",
-          "Relações métricas relevantes (teorema, fórmula) aplicadas.",
-          "Aplicações práticas desse polígono em engenharia/arte/design.",
-          "Desafios encontrados e como você solucionou.",
-          "Referência/Link do seu arquivo no GeoGebra."
+          "Transformações (simetria, rotação, translação) observadas na figura:",
+          "Relações métricas relevantes (teorema, fórmula) aplicadas:",
+          "Aplicações práticas desse polígono em engenharia/arte/design:",
+          "Desafios encontrados e como você solucionou:",
+          "Referência/Link do seu arquivo no GeoGebra:"
         ]
       };
 
@@ -244,6 +280,7 @@
       const pageTitle = document.querySelector('#page-title');
       const btnGerar = document.querySelector('#btn-gerar');
       const btnSalvarTema = document.querySelector('#btn-salvar-tema');
+      const btnCopiarLink = document.querySelector('#btn-copiar-link');
       const adminMsg = document.querySelector('#admin-msg');
 
       function genericQuestions(theme){
@@ -294,7 +331,7 @@
         let match = keys.find(k => k.toLowerCase() === lv);
         if(!match){
           match = keys.find(k => {
-            const base = k.toLowerCase().split(' – ')[0];    // antes do travessão
+            const base = k.toLowerCase().split(' – ')[0]; // antes do travessão
             return lv === base || lv.includes(base) || base.includes(lv);
           });
         }
@@ -380,7 +417,7 @@
       }
       refreshDatalist();
 
-      // Gatilhos de gerar tema (agora usa input OU form, e atualiza URL)
+      // Gatilhos de gerar tema (usa input OU form, e atualiza URL)
       btnGerar?.addEventListener('click', ()=>{
         if(!isAdmin()){
           if(adminMsg){ adminMsg.textContent = 'Faça login como Admin para gerar perguntas.'; setTimeout(()=> adminMsg.textContent='', 2000); }
@@ -401,7 +438,7 @@
         if(e.key === 'Enter'){ e.preventDefault(); btnGerar?.click(); }
       });
 
-      // Ao mudar o datalist, aplica imediatamente (qualquer um dos dois fluxos é útil)
+      // Ao mudar o datalist, aplica imediatamente
       temaInput?.addEventListener('change', ()=>{
         if(!isAdmin()) return;
         const v = (temaInput?.value||'').trim();
@@ -422,6 +459,17 @@
         if(adminMsg){
           adminMsg.textContent = 'Tema salvo e link atualizado para compartilhamento.';
           setTimeout(()=> adminMsg.textContent = '', 2500);
+        }
+      });
+
+      // Copiar link p/ alunos (URL já contém ?tema=...)
+      btnCopiarLink?.addEventListener('click', async ()=>{
+        try{
+          await navigator.clipboard.writeText(location.href);
+          btnCopiarLink.textContent = 'Link copiado!';
+          setTimeout(()=> btnCopiarLink.textContent='Copiar link p/ alunos', 1800);
+        }catch{
+          alert('Não foi possível copiar. Copie manualmente o endereço da barra do navegador.');
         }
       });
 
