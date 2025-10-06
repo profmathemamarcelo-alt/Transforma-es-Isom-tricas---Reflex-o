@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Atividade - 01: Geometria Plana – Formulário Automatizado</title>
+  <title>Atividade – Formulário Automatizado</title>
 
   <!-- Tailwind via CDN: configure SEMPRE em window.tailwind.config antes do script -->
   <script>
@@ -138,7 +138,7 @@
       const $ = (s)=>document.querySelector(s);
 
       /* ========================
-       * 0) Tema Claro/Escuro (corrigido + legibilidade)
+       * 0) Tema Claro/Escuro
        * ======================== */
       const THEME_KEY = 'atividadeThemeMode';
       const themeToggle = $('#theme-toggle');
@@ -162,7 +162,28 @@
       themeToggle?.addEventListener('click', ()=> applyColorScheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark'));
 
       /* ========================
-       * 1) Questões dinâmicas — inicializar cedo e com paraquedas
+       * 1) URL ?tema=  (compartilhável)
+       * ======================== */
+      const PARAM_THEME = 'tema';
+      function getThemeFromURL(){
+        try {
+          const usp = new URLSearchParams(location.search);
+          const t = usp.get(PARAM_THEME);
+          return t ? t.trim() : '';
+        } catch { return ''; }
+      }
+      function setURLTheme(themeName, replace=true){
+        try {
+          const url = new URL(location.href);
+          if (themeName && themeName.trim()) url.searchParams.set(PARAM_THEME, themeName.trim());
+          else url.searchParams.delete(PARAM_THEME);
+          const meth = replace ? 'replaceState' : 'pushState';
+          history[meth](null, '', url);
+        } catch {}
+      }
+
+      /* ========================
+       * 2) Questões dinâmicas
        * ======================== */
       const ADMIN_STORAGE_KEY = 'atividadeTemaSelecionado';
 
@@ -265,12 +286,32 @@
         }
       }
 
-      // Inicialização imediata e segura
+      // Matching mais resiliente para nomes de tema
+      function resolveThemeKey(val){
+        const keys = Object.keys(THEMES);
+        const lv = (val||'').toLowerCase().trim();
+        if(!lv) return '';
+        let match = keys.find(k => k.toLowerCase() === lv);
+        if(!match){
+          match = keys.find(k => {
+            const base = k.toLowerCase().split(' – ')[0];    // antes do travessão
+            return lv === base || lv.includes(base) || base.includes(lv);
+          });
+        }
+        return match || '';
+      }
+
+      // Inicialização (prioriza ?tema=)
       (function initQuestionsSafe(){
         try{
-          const defaultTheme = "Geometria Plana";
-          const savedThemeName = localStorage.getItem(ADMIN_STORAGE_KEY);
-          applyQuestionTheme(savedThemeName || defaultTheme);
+          const def = "Geometria Plana";
+          const urlTheme = getThemeFromURL();
+          const savedTheme = localStorage.getItem(ADMIN_STORAGE_KEY);
+          const effective = urlTheme || savedTheme || def;
+          applyQuestionTheme(effective);
+          if (urlTheme && urlTheme !== savedTheme){
+            try { localStorage.setItem(ADMIN_STORAGE_KEY, urlTheme); } catch {}
+          }
         }catch(e){
           console.error('[init questions] falhou:', e);
           if (questionsArea){
@@ -282,7 +323,7 @@
       })();
 
       /* ========================
-       * 2) Modo Admin (senha: 3121@Lu)
+       * 3) Modo Admin (senha: 3121@Lu)
        * ======================== */
       const ADMIN_OK_KEY = 'atividadeAdminOK';
       const ADMIN_CODE = '3121@Lu';
@@ -339,28 +380,53 @@
       }
       refreshDatalist();
 
+      // Gatilhos de gerar tema (agora usa input OU form, e atualiza URL)
       btnGerar?.addEventListener('click', ()=>{
-        if(!isAdmin()) return;
-        const val = (temaInput?.value||'').trim();
-        if(!val){ temaInput?.focus(); return; }
-        let matchedKey = Object.keys(THEMES).find(k => k.toLowerCase() === val.toLowerCase());
-        if(!matchedKey){
-          const lk = val.toLowerCase();
-          matchedKey = Object.keys(THEMES).find(k=> lk.includes(k.toLowerCase().split(' – ')[0]));
+        if(!isAdmin()){
+          if(adminMsg){ adminMsg.textContent = 'Faça login como Admin para gerar perguntas.'; setTimeout(()=> adminMsg.textContent='', 2000); }
+          return;
         }
-        applyQuestionTheme(matchedKey || val);
+        const valFromInput = (temaInput?.value||'').trim();
+        const valFromForm  = (temaForm?.value||'').trim();
+        const val = valFromInput || valFromForm;
+        if(!val){ (temaInput||temaForm)?.focus(); return; }
+        const matchedKey = resolveThemeKey(val);
+        const finalTheme = matchedKey || val;
+        applyQuestionTheme(finalTheme);
+        setURLTheme(finalTheme, true);
+      });
+
+      // Enter no campo de busca: gera direto
+      temaInput?.addEventListener('keydown', (e)=>{
+        if(e.key === 'Enter'){ e.preventDefault(); btnGerar?.click(); }
+      });
+
+      // Ao mudar o datalist, aplica imediatamente (qualquer um dos dois fluxos é útil)
+      temaInput?.addEventListener('change', ()=>{
+        if(!isAdmin()) return;
+        const v = (temaInput?.value||'').trim();
+        if(!v) return;
+        const finalTheme = resolveThemeKey(v) || v;
+        applyQuestionTheme(finalTheme);
+        setURLTheme(finalTheme, true);
       });
 
       btnSalvarTema?.addEventListener('click', ()=>{
         if(!isAdmin()) return;
-        const themeName = (temaForm?.value||'').trim();
+        const themeName = (temaForm?.value||'').trim() || (temaInput?.value||'').trim();
         if(!themeName){ if(adminMsg) adminMsg.textContent = 'Defina um tema antes de salvar.'; return; }
+
         localStorage.setItem(ADMIN_STORAGE_KEY, themeName);
-        if(adminMsg){ adminMsg.textContent = 'Tema salvo para os usuários.'; setTimeout(()=> adminMsg.textContent = '', 2000); }
+        setURLTheme(themeName, true);
+
+        if(adminMsg){
+          adminMsg.textContent = 'Tema salvo e link atualizado para compartilhamento.';
+          setTimeout(()=> adminMsg.textContent = '', 2500);
+        }
       });
 
       /* ========================
-       * 3) Utilitários
+       * 4) Utilitários
        * ======================== */
       function isValidURL(str){ try{ const u=new URL(str); return ['http:','https:'].includes(u.protocol);}catch{return false;} }
       function clearCanvas(c){ const ctx=c.getContext('2d'); if(ctx) ctx.clearRect(0,0,c.width,c.height); }
@@ -423,7 +489,7 @@
       }
 
       /* ========================
-       * 4) QR + PDF + compartilhamento
+       * 5) QR + PDF + compartilhamento
        * ======================== */
       const form=document.querySelector('#atividade-form');
       const linkInput=document.querySelector('#q10-link');
@@ -509,7 +575,7 @@
 
           const temaHeading = (data['tema']||'Atividade');
 
-          // ======= HEADER ROBUSTO (título longo não sobrepõe data) =======
+          // ======= HEADER ROBUSTO =======
           const titleStr = `Atividade – ${pdfSafe(temaHeading)}`;
           const dateStr  = 'Data: ' + new Date().toLocaleDateString('pt-BR');
 
@@ -536,7 +602,7 @@
             doc.text(dateStr, pageWidth - margin, y + 12 + titleBlockH + 6, { align: 'right' });
             y += titleBlockH + 32;
           }
-          // ================================================================
+          // ==============================
 
           function addPageIfNeeded(extra=0){
             if (y + extra > pageHeight - margin){
